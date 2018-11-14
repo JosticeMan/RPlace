@@ -4,25 +4,32 @@ import place.PlaceColor;
 import place.PlaceTile;
 import place.client.NetworkClient;
 import place.client.model.ClientModel;
+import place.network.PlaceExchange;
 import place.test.Client;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
 
+/**
+ * CSCI-242 AP COMPUTER SCIENCE X
+ * Project 2: Place
+ *
+ * PTUI for the textual user interface that clients can opt for to use in PLACE
+ *
+ * @author Justin Yau
+ */
 public class PlacePTUI extends ConsoleApplication implements Observer {
 
-    private static final PlaceColor[] colors = {PlaceColor.BLACK, PlaceColor.GRAY, PlaceColor.SILVER, PlaceColor.WHITE,
-                                                PlaceColor.MAROON, PlaceColor.RED, PlaceColor.OLIVE, PlaceColor.YELLOW,
-                                                PlaceColor.GREEN, PlaceColor.LIME, PlaceColor.TEAL, PlaceColor.AQUA,
-                                                PlaceColor.NAVY, PlaceColor.BLUE, PlaceColor.PURPLE, PlaceColor.FUCHSIA};
+    private NetworkClient serverConn; // The client's connection to the server
+    private ClientModel model;        // The model of this PTUI
+    private Scanner userIn;           // Scanner reading user input
+    private PrintWriter userOut;      // System.out stream
+    private String userName;          // Username of this client
 
-    private NetworkClient serverConn;
-    private ClientModel model;
-    private Scanner userIn;
-    private PrintWriter userOut;
-    private String userName;
-
+    /***
+     * Establishes a connection with the server
+     */
     public void init() {
         List< String > args = super.getArguments();
 
@@ -36,6 +43,7 @@ public class PlacePTUI extends ConsoleApplication implements Observer {
         // Create the network connection.
         try {
             this.serverConn = new NetworkClient( host, port, this.userName, this.model );
+            System.out.println(this.serverConn.getSock().toString());
         } catch (IOException | ClassNotFoundException e) {
             System.out.println(e);
             System.exit(0);
@@ -43,6 +51,10 @@ public class PlacePTUI extends ConsoleApplication implements Observer {
 
     }
 
+    /***
+     * Routine called when a tile is updated by the server
+     * @param tile - The tile that has been updated
+     */
     private void updateTile(PlaceTile tile) {
         this.userOut.println("=== TILE CHANGED ===");
         this.userOut.println(this.model);
@@ -53,6 +65,10 @@ public class PlacePTUI extends ConsoleApplication implements Observer {
         }
     }
 
+    /***
+     * Routine called when the model is active. Will display appropriate messages to the user
+     * @param arg - Object that has been passed through notifyObservers(), if any.
+     */
     private void handleActive(Object arg) {
         if(arg instanceof PlaceTile) {
             updateTile((PlaceTile) arg);
@@ -73,7 +89,7 @@ public class PlacePTUI extends ConsoleApplication implements Observer {
                         }
                         int col = this.userIn.nextInt();
                         int color  = Integer.parseInt(this.userIn.next());
-                        PlaceTile tileTBP = new PlaceTile(row, col, this.userName, colors[color], new Date().getTime());
+                        PlaceTile tileTBP = new PlaceTile(row, col, this.userName, PlaceExchange.colors[color], new Date().getTime());
                         if(this.model.isValid(tileTBP)) {
                             this.serverConn.createTileChangeRequest(tileTBP);
                             done = true;
@@ -86,6 +102,10 @@ public class PlacePTUI extends ConsoleApplication implements Observer {
         }
     }
 
+    /***
+     * Updates the current state of the view that the user sees
+     * @param arg - Object that has been passed through notifyObservers(), if any.
+     */
     private void refresh(Object arg) {
         ClientModel.Status status = this.model.getStatus();
         switch(status) {
@@ -97,16 +117,23 @@ public class PlacePTUI extends ConsoleApplication implements Observer {
                 break;
             case ERROR:
                 this.userOut.println(status.toString());
+                this.endSession();
                 break;
         }
     }
 
+    /***
+     * Closes all stream connections and the connection the server
+     */
     public void stop() {
         this.userIn.close();
         this.userOut.close();
         this.serverConn.close();
     }
 
+    /***
+     * Notifies the thread for this application to shut down
+     */
     private synchronized void endSession() {
         this.notify();
     }

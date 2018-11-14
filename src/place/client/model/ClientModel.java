@@ -6,6 +6,14 @@ import place.PlaceTile;
 
 import java.util.Observable;
 
+/**
+ * CSCI-242 AP COMPUTER SCIENCE X
+ * Project 2: Place
+ *
+ * Model used to deliver the current state of the board and communicates whether or not the user can make a move.
+ *
+ * @author Justin Yau
+ */
 public class ClientModel extends Observable {
 
     /** The square dimension of the board */
@@ -17,6 +25,9 @@ public class ClientModel extends Observable {
     /** Status of the board */
     private Status status;
 
+    /***
+     * Possible statuses of the model
+     */
     public enum Status {
         ACTIVE, CLOSED , ERROR;
 
@@ -44,26 +55,45 @@ public class ClientModel extends Observable {
         this.makeMove = true;
     }
 
+    /***
+     * Returns the current status of the model
+     * @return - The current status of the model
+     */
     public Status getStatus() {
         return status;
     }
 
+    /***
+     * Returns whether or not the user can make a move
+     * @return - Whether or not the user can make a move
+     */
     public boolean canMakeMove() {
         return makeMove;
     }
 
+    /***
+     * Updates the current state of makeMove, which enables the user to make a move if true
+     * @param move - What to set makeMove to
+     */
     public void setMove(boolean move) {
         makeMove = move;
         super.setChanged();
         super.notifyObservers();
     }
 
+    /***
+     * Updates a tile and notifies observers
+     * @param tile - The tile to be updated
+     */
     public void updatePixel(PlaceTile tile) {
         setTile(tile);
         super.setChanged();
         super.notifyObservers(tile);
     }
 
+    /***
+     * Updates the state of the model and notifies observers
+     */
     public void close() {
         this.status = Status.CLOSED;
         super.setChanged();

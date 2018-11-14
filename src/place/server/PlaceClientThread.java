@@ -2,6 +2,7 @@ package place.server;
 
 import place.PlaceBoard;
 import place.PlaceTile;
+import place.network.PlaceExchange;
 import place.network.PlaceRequest;
 
 import java.io.IOException;
@@ -9,17 +10,27 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 
+/**
+ * CSCI-242 AP COMPUTER SCIENCE X
+ * Project 2: Place
+ *
+ * A thread created by the server to handle requests sent by the connected client associated with this thread
+ *
+ * @author Justin Yau
+ */
 public class PlaceClientThread extends Thread {
 
-    private static final boolean DEBUG = false;
-    private static final int SLEEP_TIME = 500;
+    private Socket socket = null;   // The Client Connection
+    private PlaceServer server;     // The server this thread was created by
+    private String username;        // The username of the client
+    private ObjectOutputStream out; // The output stream of the socket
+    private ObjectInputStream in;   // The input stream of the socket
 
-    private Socket socket = null;
-    private PlaceServer server;
-    private String username;
-    private ObjectOutputStream out;
-    private ObjectInputStream in;
-
+    /***
+     * Creates a new thread that will handle requests from the socket
+     * @param socket - The socket to handle requests from
+     * @param server - The server that created this thread
+     */
     public PlaceClientThread(Socket socket, PlaceServer server) {
         super("PlaceClientThread");
         this.socket = socket;
@@ -32,25 +43,32 @@ public class PlaceClientThread extends Thread {
         }
     }
 
+    /***
+     * Used for debugging. Will print messages if debug variable is enabled
+     * @param logMsg - The message to print
+     */
     private static void dPrint( Object logMsg ) {
-        if ( PlaceClientThread.DEBUG ) {
+        if ( PlaceExchange.DEBUG ) {
             System.out.println( logMsg );
         }
     }
 
+    /***
+     * Handles the logging in of the user and any request following that
+     */
     public void run() {
         try {
             PlaceRequest<?> req = (PlaceRequest<?>) in.readUnshared();
             if (req.getType() == PlaceRequest.RequestType.LOGIN) {
                 if( server.addClient(username = (String) req.getData(), this.socket, this)) {
-                    createLoginSuccess();
-                    createBoardRequest();
+                    PlaceExchange.createLoginSuccess(this.out, socket.toString());
+                    PlaceExchange.createBoardRequest(this.out, server.getBoard());
                     go();
                 } else {
-                    createError(username + " already logged in! Try a different user!");
+                    PlaceExchange.createError(this.out, username + " already logged in! Try a different user!");
                 }
             } else {
-                createError("Expected login request first!");
+                PlaceExchange.createError(this.out, "Expected login request first!");
             }
             socket.close();
         } catch (IOException e) {
@@ -61,6 +79,11 @@ public class PlaceClientThread extends Thread {
         this.dPrint(username + " Thread ended!");
     }
 
+    /***
+     * Handles any request made after the login request is made and successfully authorized
+     * @throws IOException
+     * @throws ClassNotFoundException
+     */
     public void go() throws IOException, ClassNotFoundException {
         boolean loggedIn = true;
         try {
@@ -78,39 +101,30 @@ public class PlaceClientThread extends Thread {
         server.removeClient(username, this.socket);
     }
 
+    /***
+     * Processes the inputted request and replies appropriately
+     * @param req - The request sent to the socket
+     * @throws IOException
+     * @throws InterruptedException
+     */
     public void processRequest(PlaceRequest<?> req) throws IOException, InterruptedException {
         PlaceRequest.RequestType type = req.getType();
         if(type == PlaceRequest.RequestType.CHANGE_TILE) {
             if( server.changeTile((PlaceTile) req.getData()) ) {
-                this.sleep(SLEEP_TIME);
+                this.sleep(PlaceExchange.SLEEP_TIME);
             }
         } else {
-            createError("Expected change tile requests only!");
+            PlaceExchange.createError(this.out, "Expected change tile requests only!");
         }
     }
 
-    public void createLoginSuccess() throws IOException {
-        PlaceRequest<String> req = new PlaceRequest<>(PlaceRequest.RequestType.LOGIN_SUCCESS, socket.toString());
-        this.out.writeUnshared(req);
-        this.out.flush();
-    }
-
-    public void createBoardRequest() throws IOException {
-        PlaceRequest<PlaceBoard> req = new PlaceRequest<>(PlaceRequest.RequestType.BOARD, server.getBoard());
-        this.out.writeUnshared(req);
-        this.out.flush();
-    }
-
-    public void createError(String errMsg) throws IOException {
-        PlaceRequest<String> req = new PlaceRequest<>(PlaceRequest.RequestType.ERROR, errMsg);
-        this.out.writeUnshared(req);
-        this.out.flush();
-    }
-
+    /***
+     * Creates a request to let users know that a tile has been updated on the server
+     * @param tile - The tile to be updated
+     * @throws IOException
+     */
     public void createChangedTile(PlaceTile tile) throws IOException {
-        PlaceRequest<PlaceTile> req = new PlaceRequest<>(PlaceRequest.RequestType.TILE_CHANGED, tile);
-        this.out.writeUnshared(req);
-        this.out.flush();
+        PlaceExchange.createChangedTile(this.out, tile);
     }
 
 }

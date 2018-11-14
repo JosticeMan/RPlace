@@ -3,6 +3,7 @@ package place.client;
 import place.PlaceBoard;
 import place.PlaceTile;
 import place.client.model.ClientModel;
+import place.network.PlaceExchange;
 import place.network.PlaceRequest;
 
 import java.io.IOException;
@@ -11,19 +12,33 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.NoSuchElementException;
 
+/**
+ * CSCI-242 AP COMPUTER SCIENCE X
+ * Project 2: Place
+ *
+ * Essentially the client's connection to the server and acts sort of like the controller in the MVC model.
+ *
+ * @author Justin Yau
+ */
 public class NetworkClient {
 
-    private static final boolean DEBUG = false;
-    private static final int SLEEP_TIME = 500;
+    private Socket sock;                    // Client's connection to the server
+    private String userName;                // Client's username
+    private ObjectOutputStream networkOut;  // The output stream of the socket
+    private ObjectInputStream networkIn;    // The input stream of the socket
+    private ClientModel board;              // The current state of the board
+    private boolean go;                     // Whether or not to handle requests or not
+    private Thread netThread;               // The thread that this process runs under
 
-    private Socket sock;
-    private String userName;
-    private ObjectOutputStream networkOut;
-    private ObjectInputStream networkIn;
-    private ClientModel board;
-    private boolean go;
-    private Thread netThread;
-
+    /***
+     * Creates a new connection to the server and will handle any requests sent from the server and reply appropriately
+     * @param hostname - The hostname of the server
+     * @param portNumber - The port
+     * @param userName - The username of the client
+     * @param model - The current state of the board
+     * @throws IOException
+     * @throws ClassNotFoundException
+     */
     public NetworkClient(String hostname, int portNumber, String userName, ClientModel model) throws
                                                                                 IOException, ClassNotFoundException {
             this.sock = new Socket( hostname, portNumber );
@@ -33,7 +48,7 @@ public class NetworkClient {
             this.board = model;
             this.go = true;
 
-            createLoginRequest(userName);
+            PlaceExchange.createLoginRequest(networkOut, userName);
             //Block waiting for next request from the server
             PlaceRequest<?> req = (PlaceRequest<?>) networkIn.readUnshared();
             if (req.getType() == PlaceRequest.RequestType.LOGIN_SUCCESS) {
@@ -55,30 +70,57 @@ public class NetworkClient {
             }
     }
 
+    /***
+     * Returns the client's connection to the server
+     * @return - The client's connection to the server
+     */
+    public Socket getSock() {
+        return sock;
+    }
+
+    /***
+     * Debug method that will only print messages if the Debug variable is enabled
+     * @param logMsg - The message to print
+     */
     private static void dPrint( Object logMsg ) {
-        if ( NetworkClient.DEBUG ) {
+        if ( PlaceExchange.DEBUG ) {
             System.out.println( logMsg );
         }
     }
 
+    /***
+     * Returns whether or not this thread should keep handling requests
+     * @return - Whether or not this thread should keep handling requests
+     */
     private synchronized boolean goodToGo() {
 
         return this.go;
     }
 
+    /***
+     * Updates the state of this connection
+     */
     private synchronized void stop() {
 
         this.go = false;
     }
 
+    /***
+     * Sends a error to the socket and makes it close. Also updates the state of the board
+     */
     public void close() {
         try {
-            createError("DISCONNECT");
+            PlaceExchange.createError(this.networkOut, "DISCONNECT");
         }
         catch( IOException ioe ) {
         }
+        this.board.close();
     }
 
+    /***
+     * Routine used when an error has been received and will deal with it accordingly
+     * @param arguments - Information regarding the error
+     */
     public void error( String arguments ) {
         NetworkClient.dPrint( '!' + arguments );
         this.board.error(arguments);
@@ -86,6 +128,9 @@ public class NetworkClient {
         this.stop();
     }
 
+    /***
+     * Handles incoming requests
+     */
     private void run() {
         while( this.goodToGo() ) {
             try {
@@ -111,30 +156,20 @@ public class NetworkClient {
         this.close();
     }
 
+    /***
+     * Creates a request to change a tile and sleeps a required cooldown time
+     * @param tile - The tile to be updated
+     * @throws IOException
+     */
     public void createTileChangeRequest(PlaceTile tile) throws IOException {
-        PlaceRequest<PlaceTile> req = new PlaceRequest<>(PlaceRequest.RequestType.CHANGE_TILE, tile);
-        this.networkOut.writeUnshared(req);
-        this.networkOut.flush();
+        PlaceExchange.createTileChangeRequest(this.networkOut, tile);
         try {
             this.board.setMove(false);
-            netThread.sleep(SLEEP_TIME);
+            netThread.sleep(PlaceExchange.SLEEP_TIME);
             this.board.setMove(true);
         } catch (InterruptedException e){
 
         }
     }
-
-    public void createLoginRequest(String username) throws IOException {
-        PlaceRequest<String> req = new PlaceRequest<>(PlaceRequest.RequestType.LOGIN, username);
-        this.networkOut.writeUnshared(req);
-        this.networkOut.flush();
-    }
-
-    public void createError(String errMsg) throws IOException {
-        PlaceRequest<String> req = new PlaceRequest<>(PlaceRequest.RequestType.ERROR, errMsg);
-        this.networkOut.writeUnshared(req);
-        this.networkOut.flush();
-    }
-
 
 }
