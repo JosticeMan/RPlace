@@ -18,10 +18,13 @@ import java.util.HashMap;
  */
 public class PlaceServer {
 
+    private static final int COOLDOWN_MILLI = 5000; //Time before an ip can make another connection request again
+
     private int portNumber; //The port number that the server will be hosted on
     private PlaceBoard board; //The server-side version of the board
     private boolean listening; //Whether or not the server is active or not
     private HashMap<String, PlaceClientThread> clients; //A map of all the active clients that are connected to this server
+    private HashMap<String, Long> times; //A map containing ips and their last connection time
 
     /***
      * Creates a new server that will allow players to connect to manipulate pixels on the created board
@@ -33,7 +36,7 @@ public class PlaceServer {
         this.board = new PlaceBoard(dim);
         this.listening = true;
         this.clients = new HashMap<String, PlaceClientThread>();
-
+        this.times = new HashMap<String, Long>();
     }
 
     /***
@@ -44,13 +47,43 @@ public class PlaceServer {
         try (ServerSocket serverSocket = new ServerSocket(portNumber)) {
             System.out.println("Server started on port: " + portNumber + "! Now accepting users!");
             while (listening) {
-                new PlaceClientThread(serverSocket.accept(), this).start();
+                handleNextClient(serverSocket);
             }
             System.out.println("Server Stopped.");
         } catch (IOException e) {
             System.err.println("Could not listen on port " + portNumber);
             System.exit(-1);
         }
+    }
+
+    /***
+     * Handles the registration of the next incoming client
+     * @param serverSocket - The server socket this server is hosted on
+     * @throws IOException
+     */
+    public void handleNextClient(ServerSocket serverSocket) throws IOException {
+        Socket sock = serverSocket.accept();
+        String ip = sock.getRemoteSocketAddress().toString().replace("/", "").split(":")[0];
+        if(times.containsKey(ip)) {
+            if(canConnect(ip)) {
+                times.replace(ip, System.currentTimeMillis());
+                new PlaceClientThread(sock, this).start();
+            } else {
+                sock.close();
+            }
+        } else {
+            times.put(ip, System.currentTimeMillis());
+            new PlaceClientThread(sock, this).start();
+        }
+    }
+
+    /***
+     * Determines whether or not a client is allowed to pass through and connect to the server based on last connection.
+     * @param ip - The ip of the user
+     * @return Whether or not a client is allowed to pass through and connect to the server based on last connection.
+     */
+    public boolean canConnect(String ip) {
+        return (System.currentTimeMillis() - times.get(ip)) >= COOLDOWN_MILLI;
     }
 
     /***
