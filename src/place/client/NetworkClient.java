@@ -188,6 +188,7 @@ public class NetworkClient {
 
         CoolDown cd = new CoolDown(this.board);
         Thread cdT = new Thread(cd);
+        cdT.start();
     }
 
 }

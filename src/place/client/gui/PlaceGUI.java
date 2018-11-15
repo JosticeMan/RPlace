@@ -6,6 +6,7 @@ import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ToggleButton;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
@@ -22,10 +23,7 @@ import place.client.model.ClientModel;
 import place.network.PlaceExchange;
 
 import java.io.IOException;
-import java.util.Date;
-import java.util.List;
-import java.util.Observable;
-import java.util.Observer;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -44,7 +42,7 @@ public class PlaceGUI extends Application implements Observer {
     private ClientModel model;                      // The model containing the state of the board
     private String username;                        // The username of the client
     private Rectangle[][] grid;                     // The current state of all the rectangles being stored on the gridPane
-    private ToggleGroup canvas;                      // The current group of canvas buttons
+    private ToggleGroup canvas;                     // The current group of canvas buttons
 
     /***
      * Establishes connection with the server and sets up the model for communication
@@ -94,6 +92,7 @@ public class PlaceGUI extends Application implements Observer {
         for(int row = 0; row < dim; row++) {
             for(int col = 0; col < dim; col++) {
                 Rectangle r = new Rectangle(rectangleSize, rectangleSize);
+                updateTooltip(r, startBoard[row][col]);
                 PlaceColor color = startBoard[row][col].getColor();
                 r.setFill(Color.rgb(color.getRed(), color.getGreen(), color.getBlue()));
                 final int re = row;
@@ -101,7 +100,6 @@ public class PlaceGUI extends Application implements Observer {
                 r.setOnMousePressed( event -> {
                     buttonPressed(re, ce);
                 });
-                updateTooltip(r, startBoard[row][col]);
                 //r.setStroke(Color.BLACK);
                 //r.setStrokeType(StrokeType.INSIDE);
                 grid[row][col] = r;
@@ -117,23 +115,24 @@ public class PlaceGUI extends Application implements Observer {
      * @param t - The tile containing updated information for the tooltip
      */
     public void updateTooltip(Rectangle r, PlaceTile t) {
-        Date stamp = new Date(TimeUnit.SECONDS.toMillis(t.getTime()));
+        Date stamp = new Date(t.getTime() * 1000);
         Tooltip info = new Tooltip("(" + t.getRow() + ", " + t.getCol() + ") \n" +
                 t.getOwner() + "\n" +
                 stamp.toString());
-        r.setOnMouseMoved(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-                Node node = (Node) event.getSource();
-                info.show(node, event.getScreenX() + 10, event.getScreenY());
-            }
-        });
-        r.setOnMouseExited(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-                info.hide();
-            }
-        });
+        Tooltip.install(r, info);
+//        r.setOnMouseEntered(new EventHandler<MouseEvent>() {
+//            @Override
+//            public void handle(MouseEvent event) {
+//                Node node = (Node) event.getSource();
+//                info.show(node, event.getScreenX() + 10, event.getScreenY());
+//            }
+//        });
+//        r.setOnMouseExited(new EventHandler<MouseEvent>() {
+//            @Override
+//            public void handle(MouseEvent event) {
+//                info.hide();
+//            }
+//        });
     }
 
     /***
@@ -194,7 +193,7 @@ public class PlaceGUI extends Application implements Observer {
     public void buttonPressed(int row, int col) {
         PlaceTile tileTBP = new PlaceTile(row, col, this.username,
                 PlaceExchange.colors[Integer.parseInt(((ToggleButton)canvas.getSelectedToggle()).getText())]
-                , new Date().getTime());
+                , Calendar.getInstance(TimeZone.getTimeZone("America/New_York")).getTimeInMillis());
         try {
             if(this.model.canMakeMove()) {
                 this.serverConn.createTileChangeRequest(tileTBP);
