@@ -183,7 +183,7 @@ public class PlaceGUI extends Application implements Observer {
             btn.setPrefSize(btnSize, btnSize);
             PlaceColor color = PlaceExchange.colors[i];
             String hex = String.format("#%02X%02X%02X", color.getRed(), color.getGreen(), color.getBlue());
-            btn.setStyle("-fx-background-color: " + hex + ";");
+            btn.setStyle("-fx-base: " + hex + ";");
             btn.setText(String.valueOf(i));
             btn.setOnAction( (ActionEvent e) -> canvas.selectToggle(btn));
             btn.setToggleGroup(canvas);
