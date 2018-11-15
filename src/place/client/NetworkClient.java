@@ -183,7 +183,7 @@ public class NetworkClient {
      * @param tile - The tile to be updated
      * @throws IOException
      */
-    public void createTileChangeRequest(PlaceTile tile) throws IOException {
+    public synchronized void createTileChangeRequest(PlaceTile tile) throws IOException {
         PlaceExchange.createTileChangeRequest(this.networkOut, tile);
 
         CoolDown cd = new CoolDown(this.board);
