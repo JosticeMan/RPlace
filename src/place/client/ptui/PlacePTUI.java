@@ -6,6 +6,7 @@ import place.client.model.ClientModel;
 import place.network.PlaceExchange;
 
 import java.io.*;
+import java.text.DecimalFormatSymbols;
 import java.util.*;
 
 /**
@@ -85,7 +86,8 @@ public class PlacePTUI extends ConsoleApplication implements Observer {
                             return;
                         }
                         int col = this.userIn.nextInt();
-                        int color  = Integer.parseInt(this.userIn.next(), 16);
+                        String next  = this.userIn.next();
+                        int color = isStringNumeric(next) ? Integer.parseInt(next) : Integer.parseInt(next, 16);
                         PlaceTile tileTBP = new PlaceTile(row, col, this.userName, PlaceExchange.colors[color],
                                 System.currentTimeMillis());
                         if(this.model.isValid(tileTBP)) {
@@ -98,6 +100,36 @@ public class PlacePTUI extends ConsoleApplication implements Observer {
                 } while (!done);
             }
         }
+    }
+
+    /***
+     * Returns whether or not the string is numeric
+     * @param str - The string to check
+     * @return - Whether or not the string is numeric
+     */
+    public static boolean isStringNumeric( String str )
+    {
+        DecimalFormatSymbols currentLocaleSymbols = DecimalFormatSymbols.getInstance();
+        char localeMinusSign = currentLocaleSymbols.getMinusSign();
+
+        if ( !Character.isDigit( str.charAt( 0 ) ) && str.charAt( 0 ) != localeMinusSign ) return false;
+
+        boolean isDecimalSeparatorFound = false;
+        char localeDecimalSeparator = currentLocaleSymbols.getDecimalSeparator();
+
+        for ( char c : str.substring( 1 ).toCharArray() )
+        {
+            if ( !Character.isDigit( c ) )
+            {
+                if ( c == localeDecimalSeparator && !isDecimalSeparatorFound )
+                {
+                    isDecimalSeparatorFound = true;
+                    continue;
+                }
+                return false;
+            }
+        }
+        return true;
     }
 
     /***
