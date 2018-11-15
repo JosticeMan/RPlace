@@ -87,7 +87,7 @@ public class PlacePTUI extends ConsoleApplication implements Observer {
                         int col = this.userIn.nextInt();
                         int color  = Integer.parseInt(this.userIn.next(), 16);
                         PlaceTile tileTBP = new PlaceTile(row, col, this.userName, PlaceExchange.colors[color],
-                                Calendar.getInstance(TimeZone.getTimeZone("America/New_York")).getTimeInMillis());
+                                System.currentTimeMillis());
                         if(this.model.isValid(tileTBP)) {
                             this.serverConn.createTileChangeRequest(tileTBP);
                             done = true;

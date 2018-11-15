@@ -1,6 +1,7 @@
 package place.client.gui;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
@@ -16,6 +17,7 @@ import javafx.scene.shape.StrokeType;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.ToggleGroup;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import place.PlaceColor;
 import place.PlaceTile;
 import place.client.NetworkClient;
@@ -23,6 +25,8 @@ import place.client.model.ClientModel;
 import place.network.PlaceExchange;
 
 import java.io.IOException;
+import java.sql.Time;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -36,13 +40,14 @@ import java.util.concurrent.TimeUnit;
  */
 public class PlaceGUI extends Application implements Observer {
 
-    private static final double rectangleSize = 50; // The client
+    private double rectangleSize = 500; // The client
     private NetworkClient serverConn;               // The connection client
 
     private ClientModel model;                      // The model containing the state of the board
     private String username;                        // The username of the client
     private Rectangle[][] grid;                     // The current state of all the rectangles being stored on the gridPane
     private ToggleGroup canvas;                     // The current group of canvas buttons
+    private HashMap<Rectangle, Tooltip> tips;       // Map of all the rectangles on the board and their tooltips, if any
 
     /***
      * Establishes connection with the server and sets up the model for communication
@@ -57,6 +62,7 @@ public class PlaceGUI extends Application implements Observer {
             int port = Integer.parseInt(args.get(1));
             this.username = args.get(2);
 
+            this.tips = new HashMap<Rectangle, Tooltip>();
             // Create uninitialized board.
             this.model = new ClientModel();
             // Create the network connection.
@@ -64,7 +70,7 @@ public class PlaceGUI extends Application implements Observer {
 
         } catch( ClassNotFoundException | ArrayIndexOutOfBoundsException | NumberFormatException | IOException e ) {
             System.out.println( e );
-            throw new RuntimeException( e );
+            System.exit(0);
         }
     }
 
@@ -106,7 +112,25 @@ public class PlaceGUI extends Application implements Observer {
                 theBoard.add(r, col, row);
             }
         }
+        theBoard.setSnapToPixel(false);
         return theBoard;
+    }
+
+    /***
+     * This runnable is executed to hide the tooltip from the GUI
+     */
+    class hideTip implements Runnable {
+
+        private Tooltip tip;
+
+        public hideTip(Tooltip tip) {
+            this.tip = tip;
+        }
+
+        @Override
+        public void run() {
+            tip.hide();
+        }
     }
 
     /***
@@ -115,24 +139,30 @@ public class PlaceGUI extends Application implements Observer {
      * @param t - The tile containing updated information for the tooltip
      */
     public void updateTooltip(Rectangle r, PlaceTile t) {
-        Date stamp = new Date(t.getTime() * 1000);
+        Date stamp = new Date(TimeUnit.MILLISECONDS.convert(t.getTime(), TimeUnit.MILLISECONDS));
         Tooltip info = new Tooltip("(" + t.getRow() + ", " + t.getCol() + ") \n" +
                 t.getOwner() + "\n" +
                 stamp.toString());
-        Tooltip.install(r, info);
-//        r.setOnMouseEntered(new EventHandler<MouseEvent>() {
-//            @Override
-//            public void handle(MouseEvent event) {
-//                Node node = (Node) event.getSource();
-//                info.show(node, event.getScreenX() + 10, event.getScreenY());
-//            }
-//        });
-//        r.setOnMouseExited(new EventHandler<MouseEvent>() {
-//            @Override
-//            public void handle(MouseEvent event) {
-//                info.hide();
-//            }
-//        });
+        //Tooltip.install(r.getStyleableNode(), info);
+        if(tips.containsKey(r)) {
+           Platform.runLater(new hideTip(tips.get(r)));
+           tips.replace(r, info);
+        } else {
+            tips.put(r, info);
+        }
+        r.setOnMouseEntered(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent event) {
+                Node node = (Node) event.getSource();
+                info.show(node, event.getScreenX() + 10, event.getScreenY());
+            }
+        });
+        r.setOnMouseExited(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent event) {
+                info.hide();
+            }
+        });
     }
 
     /***
@@ -172,6 +202,7 @@ public class PlaceGUI extends Application implements Observer {
             BorderPane mainPane = new BorderPane();
 
             int dim = model.getDim();
+            rectangleSize = rectangleSize/dim;
 
             GridPane theBoard = createBoard(dim);
             GridPane canvasPane = createCanvas(dim);
@@ -193,13 +224,34 @@ public class PlaceGUI extends Application implements Observer {
     public void buttonPressed(int row, int col) {
         PlaceTile tileTBP = new PlaceTile(row, col, this.username,
                 PlaceExchange.colors[Integer.parseInt(((ToggleButton)canvas.getSelectedToggle()).getText())]
-                , Calendar.getInstance(TimeZone.getTimeZone("America/New_York")).getTimeInMillis());
+                , System.currentTimeMillis());
         try {
             if(this.model.canMakeMove()) {
                 this.serverConn.createTileChangeRequest(tileTBP);
             }
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    /***
+     * Routine executed to update the GUI components
+     */
+    class refreshRun implements Runnable {
+
+        private PlaceTile tile;
+        private Rectangle r;
+
+        public refreshRun(PlaceTile tile, Rectangle r) {
+            this.tile = tile;
+            this.r = r;
+        }
+
+        @Override
+        public void run() {
+            PlaceColor color = tile.getColor();
+            r.setFill(Color.rgb(color.getRed(), color.getGreen(), color.getBlue()));
+            updateTooltip(r, tile);
         }
     }
 
@@ -211,9 +263,7 @@ public class PlaceGUI extends Application implements Observer {
     private void refresh(Object arg) {
         if(arg instanceof PlaceTile) {
             PlaceTile tile = (PlaceTile) arg;
-            PlaceColor color = tile.getColor();
-            this.grid[tile.getRow()][tile.getCol()].setFill(Color.rgb(color.getRed(), color.getGreen(), color.getBlue()));
-            updateTooltip(this.grid[tile.getRow()][tile.getCol()], tile);
+            Platform.runLater(new refreshRun(tile, this.grid[tile.getRow()][tile.getCol()]));
         }
     }
 
