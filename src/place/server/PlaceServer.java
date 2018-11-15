@@ -33,6 +33,7 @@ public class PlaceServer {
         this.board = new PlaceBoard(dim);
         this.listening = true;
         this.clients = new HashMap<String, PlaceClientThread>();
+
     }
 
     /***
@@ -58,6 +59,14 @@ public class PlaceServer {
      */
     public synchronized PlaceBoard getBoard() {
         return this.board;
+    }
+
+    /***
+     * Returns the current list of clients connected to server
+     * @return - The current list of clients connected to server
+     */
+    public synchronized HashMap<String, PlaceClientThread> getClients() {
+        return clients;
     }
 
     /***
@@ -140,8 +149,8 @@ public class PlaceServer {
 
         processArgs(args);
 
-        new PlaceServer(Integer.parseInt(args[0]), Integer.parseInt(args[1])).go();
-
+        PlaceServer server = new PlaceServer(Integer.parseInt(args[0]), Integer.parseInt(args[1]));
+        server.go();
     }
 
     /***

@@ -119,6 +119,14 @@ public class PlaceClientThread extends Thread {
     }
 
     /***
+     * Used by the server when shutting down
+     * @param msg - Message to relay to the clients about this event
+     */
+    public void createError(String msg) throws IOException {
+        PlaceExchange.createError(this.out, msg);
+    }
+
+    /***
      * Creates a request to let users know that a tile has been updated on the server
      * @param tile - The tile to be updated
      * @throws IOException

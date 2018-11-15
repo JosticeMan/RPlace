@@ -56,6 +56,14 @@ public class ClientModel extends Observable {
     }
 
     /***
+     * Returns the dimension of the board
+     * @return - The dimension of the board
+     */
+    public int getDim() {
+        return this.dim;
+    }
+
+    /***
      * Returns the current status of the model
      * @return - The current status of the model
      */
@@ -95,7 +103,7 @@ public class ClientModel extends Observable {
      * Updates the state of the model and notifies observers
      */
     public void close() {
-        this.status = Status.CLOSED;
+        status = Status.CLOSED;
         super.setChanged();
         super.notifyObservers();
     }

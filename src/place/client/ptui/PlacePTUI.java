@@ -1,14 +1,11 @@
 package place.client.ptui;
 
-import place.PlaceColor;
 import place.PlaceTile;
 import place.client.NetworkClient;
 import place.client.model.ClientModel;
 import place.network.PlaceExchange;
-import place.test.Client;
 
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.*;
 
 /**
@@ -88,7 +85,7 @@ public class PlacePTUI extends ConsoleApplication implements Observer {
                             return;
                         }
                         int col = this.userIn.nextInt();
-                        int color  = Integer.parseInt(this.userIn.next());
+                        int color  = Integer.parseInt(this.userIn.next(), 16);
                         PlaceTile tileTBP = new PlaceTile(row, col, this.userName, PlaceExchange.colors[color], new Date().getTime());
                         if(this.model.isValid(tileTBP)) {
                             this.serverConn.createTileChangeRequest(tileTBP);
@@ -116,7 +113,10 @@ public class PlacePTUI extends ConsoleApplication implements Observer {
                 this.endSession();
                 break;
             case ERROR:
-                this.userOut.println(status.toString());
+                this.userOut.println("ERROR: " + status.toString());
+                //DISCLAIMER: THIS WILL NOT EXIT THE APPLICATION IF THE SERVER CONNECTION IS LOST AS SCANNER NEXTINT IS STILL WAITING
+                //I HAVE NO REAL EFFICIENT WAY OF UNBLOCKING IT WITHOUT SOMETHING LIKE JUNIT
+                //PS YOUR REVERSI PROGRAM IS ALSO LIKE THIS
                 this.endSession();
                 break;
         }

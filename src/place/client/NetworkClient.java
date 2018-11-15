@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.NoSuchElementException;
 
 /**
@@ -101,7 +102,6 @@ public class NetworkClient {
      * Updates the state of this connection
      */
     private synchronized void stop() {
-
         this.go = false;
     }
 
@@ -122,9 +122,8 @@ public class NetworkClient {
      * @param arguments - Information regarding the error
      */
     public void error( String arguments ) {
-        NetworkClient.dPrint( '!' + arguments );
+        NetworkClient.dPrint( "Fatal Error: " + arguments );
         this.board.error(arguments);
-        dPrint( "Fatal error: " + arguments );
         this.stop();
     }
 
@@ -140,10 +139,9 @@ public class NetworkClient {
                     board.updatePixel((PlaceTile) request.getData());
                 } else if(request.getType() == PlaceRequest.RequestType.ERROR){
                     this.error((String) request.getData());
-                    this.stop();
                 }
             }
-            catch( NoSuchElementException nse ) {
+            catch( SocketException se ) {
                 // Looks like the connection shut down.
                 this.error( "Lost connection to server." );
                 this.stop();
@@ -157,19 +155,39 @@ public class NetworkClient {
     }
 
     /***
+     * Runnable that is executed when the player has made a choice and sends it to the server
+     * Prevents overload
+     */
+    class CoolDown implements Runnable {
+
+        private ClientModel board;
+
+        public CoolDown(ClientModel board) {
+            this.board = board;
+        }
+
+        public void run() {
+            try {
+                this.board.setMove(false);
+                Thread.sleep(PlaceExchange.SLEEP_TIME);
+                this.board.setMove(true);
+            } catch (InterruptedException e){
+
+            }
+        }
+
+    }
+
+    /***
      * Creates a request to change a tile and sleeps a required cooldown time
      * @param tile - The tile to be updated
      * @throws IOException
      */
     public void createTileChangeRequest(PlaceTile tile) throws IOException {
         PlaceExchange.createTileChangeRequest(this.networkOut, tile);
-        try {
-            this.board.setMove(false);
-            netThread.sleep(PlaceExchange.SLEEP_TIME);
-            this.board.setMove(true);
-        } catch (InterruptedException e){
 
-        }
+        CoolDown cd = new CoolDown(this.board);
+        Thread cdT = new Thread(cd);
     }
 
 }
