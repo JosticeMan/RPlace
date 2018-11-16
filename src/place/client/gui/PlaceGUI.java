@@ -40,7 +40,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class PlaceGUI extends Application implements Observer {
 
-    private double rectangleSize = 500; // The client
+    private static final double rectangleSize = 500;// The size of the canvas
     private NetworkClient serverConn;               // The connection client
 
     private ClientModel model;                      // The model containing the state of the board
@@ -91,7 +91,7 @@ public class PlaceGUI extends Application implements Observer {
      * @param dim - The dimensions of the board
      * @return - A gridpane populated with the appropriate tiles
      */
-    public GridPane createBoard(int dim) {
+    public GridPane createBoard(int dim, double rectangleSize) {
         GridPane theBoard = new GridPane();
         PlaceTile[][] startBoard = model.getBoard();
         grid = new Rectangle[dim][dim];
@@ -173,7 +173,7 @@ public class PlaceGUI extends Application implements Observer {
     public GridPane createCanvas(int dim) {
         GridPane canvasPane = new GridPane();
 
-        double btnSize = (dim * rectangleSize)/PlaceColor.TOTAL_COLORS;
+        double btnSize = (rectangleSize)/PlaceColor.TOTAL_COLORS;
         canvas = new ToggleGroup();
         for(int i = 0; i < PlaceExchange.colors.length; ++i) {
             ToggleButton btn = new ToggleButton();
@@ -202,9 +202,9 @@ public class PlaceGUI extends Application implements Observer {
             BorderPane mainPane = new BorderPane();
 
             int dim = model.getDim();
-            rectangleSize = rectangleSize/dim;
+            double rectangleSize = this.rectangleSize/dim;
 
-            GridPane theBoard = createBoard(dim);
+            GridPane theBoard = createBoard(dim, rectangleSize);
             GridPane canvasPane = createCanvas(dim);
 
             mainPane.setCenter(theBoard);
