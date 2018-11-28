@@ -26,12 +26,13 @@ public abstract class Bot extends ConsoleApplication implements Observer{
     private Scanner userIn;           // Scanner reading user input
     private PrintWriter userOut;      // System.out stream
     private String userName;          // Username of this client
+    private List<String> args;        // The list of args passed into the command line
 
     /***
      * Establishes a connection with the server
      */
     public void init() {
-        List< String > args = super.getArguments();
+        this.args = super.getArguments();
 
         // Get host info from command line
         String host = args.get( 0 );
@@ -45,10 +46,18 @@ public abstract class Bot extends ConsoleApplication implements Observer{
             this.serverConn = new NetworkClient( host, port, this.userName, this.model );
             System.out.println(this.serverConn.getSock().toString());
         } catch (IOException | ClassNotFoundException e) {
-            System.out.println(e);
+            System.err.println(e);
             System.exit(0);
         }
 
+    }
+
+    /***
+     * Returns the list of args passed into the command line
+     * @return - The list of args passed into the command line
+     */
+    public List<String> getArg() {
+        return args;
     }
 
     /***
