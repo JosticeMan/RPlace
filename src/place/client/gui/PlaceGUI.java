@@ -143,6 +143,11 @@ public class PlaceGUI extends Application implements Observer {
         Tooltip info = new Tooltip("(" + t.getRow() + ", " + t.getCol() + ") \n" +
                 t.getOwner() + "\n" +
                 stamp.toString());
+        double rectDim = rectangleSize/PlaceColor.TOTAL_COLORS;
+        Rectangle rect = new Rectangle(rectDim, rectDim);
+        PlaceColor color = t.getColor();
+        rect.setFill(Color.rgb(color.getRed(), color.getGreen(), color.getBlue()));
+        info.setGraphic(rect);
         //Tooltip.install(r.getStyleableNode(), info);
         if(tips.containsKey(r)) {
            Platform.runLater(new hideTip(tips.get(r)));
