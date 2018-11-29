@@ -28,7 +28,7 @@ public class PlaceExchange {
     /**
      * The time in-between each TILE CHANGE request per user
      */
-    public static final int SLEEP_TIME = 0;
+    public static final int SLEEP_TIME = 500;
 
     /**
      * Whether or not to print debug messages

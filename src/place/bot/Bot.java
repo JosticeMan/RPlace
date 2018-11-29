@@ -138,7 +138,7 @@ public abstract class Bot extends ConsoleApplication implements Observer{
     /***
      * Notifies the thread for this application to shut down
      */
-    private synchronized void endSession() {
+    public synchronized void endSession() {
         this.notify();
     }
 
