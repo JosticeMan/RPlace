@@ -92,13 +92,23 @@ public class ImageBot extends Bot {
         int blue = col.getBlue();
         int[] proximity = new int[PlaceColor.TOTAL_COLORS];
         PlaceColor[] colors = PlaceExchange.colors;
-        for(int i = 0; i < colors.length; ++i) {
-            int[] diff = { Math.abs(colors[i].getRed() - red),
-                           Math.abs(colors[i].getGreen() - green),
-                           Math.abs(colors[i].getBlue())};
+        for(int i = 0; i < colors.length; i++) {
+            int[] diff = { Math.abs(ImageBot.biggerSmaller(colors[i].getRed(), red)),
+                           Math.abs(ImageBot.biggerSmaller(colors[i].getGreen(), green)),
+                           Math.abs(ImageBot.biggerSmaller(colors[i].getBlue(), blue))};
             proximity[i] = ImageBot.avg(diff);
         }
         return colors[smallest(proximity)];
+    }
+
+    /***
+     * Subtracts the smaller number from the bigger number
+     * @param first - The first number to subtract
+     * @param second - The second number to subtract
+     * @return - The subtraction processed
+     */
+    public static int biggerSmaller(int first, int second) {
+        return first > second ? first - second : second - first;
     }
 
     /***
